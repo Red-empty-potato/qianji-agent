@@ -32,51 +32,52 @@
 
 ## 安装
 
-### 前置条件
+### 一行命令
 
-- 已安装 DSH（桌面版或 CLI 均可）
-- 能访问 GitHub
-
-### 步骤
-
-在**创造模式**（Creator mode）下开一个新任务，跟 Agent 说：
+在 **创造模式**（Creator mode）下开一个新任务，跟 Agent 说：
 
 ```
-把这个仓库安装成我的 agent preset：
-https://github.com/<你的用户名>/qianji-agent
-```
-
-或者直接在 DSH 的插件管理里操作，安装目标填：
-
-```
-git+https://github.com/<你的用户名>/qianji-agent.git
+用这个地址安装 agent preset：
+git+https://github.com/Red-empty-potato/qianji-agent.git
 ```
 
 装好后，**新建任务**，在输入框底部的模式选择条里就能看到「千机」。
 
-> 注意：预设是**在任务开始时选定**的，已经开始的对话不能切换。要选「千机」，必须开新任务。
+> **预设是在任务开始时选定的**，已经开始的对话不能切换。要选「千机」，必须开新任务。
+
+### 设为默认（可选）
+
+**设置 → Agent 预设 →「千机」卡片 → 设为新任务默认**。之后新建的任务默认就用它。
 
 ## 跨机器迁移
 
-这个仓库就是为「换电脑还能用」设计的。新机器上的完整流程：
+本仓库是公开的，**新机器上拉取不需要任何凭证**，不需要配 PAT，也不需要配 SSH key。
 
-```bash
-# 1. 装好 DSH 并登录
-# 2. 在创造模式下安装
-#    安装目标：git+https://github.com/<你的用户名>/qianji-agent.git
-# 3. 新建任务，选择「千机」模式
+完整流程就三步：
+
+```
+1. 装好 DSH 并用 DeepSeek 账号登录
+2. 创造模式下说：安装 git+https://github.com/Red-empty-potato/qianji-agent.git
+3. 新建任务，选择「千机」
 ```
 
-**不需要**复制任何本地文件，**不需要**手动改配置。这也是为什么本仓库刻意只放声明、不放代码。
+**不需要**复制任何本地文件，**不需要**手动改配置，**不需要**配 GitHub 凭证。
 
 ## 修改人设
 
-直接编辑 `cordis.patch.yml` 里 `persona.prefix` 的那段文本，提交推送。然后：
+编辑 `cordis.patch.yml` 里 `persona.prefix` 那段文本，然后提交推送：
 
-- **本机已装**：重新安装一次（`install_bundle` 指向仓库地址）
-- **只想本机临时试**：改本地已安装的那份，重启 DSH
+```bash
+git add -A
+git commit -m "调整千机人设：xxx"
+git push
+```
 
-`persona` 支持三个字段：
+改完需要在**每台机器上重新安装一次**（同一条安装命令）才能生效。因为 profile 的 `pnpm-lock.yaml` 把依赖锁定到了具体提交，`pnpm` 不会自动跟进新提交。
+
+> 也可以把依赖写成 `git+https://...git#main` 让它跟踪分支，但那样每次安装都可能拉到未完成的状态，**建议保持显式更新**。
+
+`persona` 支持以下字段：
 
 | 字段 | 默认值 | 作用 |
 |---|---|---|
@@ -84,19 +85,33 @@ git+https://github.com/<你的用户名>/qianji-agent.git
 | `suffix` | 空 | 追加在 persona 之后 |
 | `complete` | `false` | 设为 `true` 则**只用** prefix 作为系统提示词，忽略 DSH 默认的其余部分 |
 
-## 设计取舍
+## 包结构说明
+
+**为什么包放在仓库根目录？**
+
+`git+https://...` 安装的是**仓库根**。如果 `package.json` 放在子目录（例如 `qianji-preset/`），安装时会找不到包定义而失败。
 
 **为什么不用 `link:` 本地路径安装？**
 
-本地开发时用 `link:` 很方便，但它是**绝对路径**（例如 `link:D:/harness-work-test/qianji-preset`），换机器就失效。git 安装是这个包唯一正确的分发方式。
+`link:` 是绝对路径（例如 `link:D:/harness-work-test`），换机器立刻失效，而且源目录一旦移动或删除，安装就断了。git 安装把这个包复制进 `node_modules`，不依赖任何外部目录。
 
-**为什么 `private: true`？**
+**为什么 `package.json` 里是 `private: true`？**
 
-它是私有的、不需要发布到 npm。git 安装**不要求** `private: false`。
+`private: true` 表示**不发布到 npm**，和 GitHub 仓库是否公开无关。git 安装不检查这个字段。
 
-**为什么 `@local/` 前缀？**
+**为什么包名带 `@local/` 前缀？**
 
-作用域名只影响本地安装时的目录位置（`node_modules/@local/...`），对 git 安装没有影响。保持原样是为了和你本机已验证可用的安装保持一致。
+作用域名只决定本地安装目录（`node_modules/@local/...`），对 git 安装没有影响。
+
+**为什么有 `.gitattributes`？**
+
+Windows 上 `core.autocrlf=true` 会把 YAML 的 LF 改写成 CRLF 再提交，可能影响 YAML 解析。这里固定了 `eol=lf`，保证仓库内换行符统一。
+
+**文件编码**
+
+`cordis.patch.yml` 是 **UTF-8（无 BOM）**。用任何现代编辑器正常编辑保存即可。
+
+> 注意：在中文 Windows 的 PowerShell 5.1 里用 `Get-Content` 预览这个文件，中文可能显示为乱码——那是控制台代码页（936/GBK）的渲染问题，**不代表文件本身是 GBK**。用 VS Code 打开是正常的。
 
 ## License
 
