@@ -28,3 +28,6 @@ desktop.ini
 .vscode/
 *.swp
 *~
+
+# ---- 临时工具脚本（非本包内容） ----
+dsh-session-tool.mjs
