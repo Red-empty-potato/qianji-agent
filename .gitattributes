@@ -1,0 +1,8 @@
+# 统一换行符：仓库内一律 LF，避免 Windows 的 CRLF 转换污染 YAML / JSON
+* text=auto eol=lf
+
+# YAML 对换行敏感，显式固定
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
